@@ -7,21 +7,26 @@ export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 
+  console.log("Webhook received. Signature present:", !!signature);
+
   if (!signature) {
+    console.error("Missing stripe-signature header");
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
   let event: Stripe.Event;
-
   try {
     event = stripe.webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!,
     );
+    console.log("Webhook signature verified. Event type:", event.type);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[v0] Webhook signature verification failed:", message);
+    console.error("Webhook signature verification failed:", message);
+    // Log first 50 chars of body for debugging (safe)
+    console.error("Body preview:", body.substring(0, 50));
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest) {
         .eq("id", orderId);
 
       if (error) {
-        console.error("[v0] Failed to update order:", error.message);
+        console.error("Failed to update order:", error.message);
         return NextResponse.json(
           { error: "Failed to update order" },
           { status: 500 },
@@ -61,7 +66,7 @@ export async function POST(request: NextRequest) {
       }
 
       console.log(
-        "[v0] Triggering PDF generation at:",
+        "Triggering PDF generation at:",
         `${baseUrl}/api/generate-pdf`,
       );
 
@@ -74,7 +79,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({ orderId }),
       }).catch((err) => {
-        console.error("[v0] Failed to trigger PDF generation:", err);
+        console.error("Failed to trigger PDF generation:", err);
       });
     }
   }
