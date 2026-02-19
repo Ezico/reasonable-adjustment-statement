@@ -4,9 +4,9 @@ import {
   generatePersonalLetter,
   generateFormalReport,
 } from "@/lib/generate-statement";
-import chromium from "@sparticuz/chromium";
-import puppeteer from "puppeteer-core";
 import type { IntakeFormData } from "@/lib/types";
+import chrome from "chrome-aws-lambda";
+import puppeteer from "puppeteer-core";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -49,14 +49,13 @@ export async function POST(request: NextRequest) {
       ? generateFormalReport(intakeData)
       : generatePersonalLetter(intakeData);
 
-  // 3. Generate PDF with Puppeteer
+  // 3. Generate PDF with chrome-aws-lambda + puppeteer-core
   let pdfBuffer: Buffer;
   try {
     const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      args: chrome.args,
+      executablePath: await chrome.executablePath,
+      headless: chrome.headless,
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
@@ -73,13 +72,14 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-  // Log buffer info to debug attachment issues
+
+  // 4. Log buffer info
   console.log(`PDF buffer size: ${pdfBuffer.length} bytes`);
   console.log(
     `PDF first 20 bytes (hex): ${pdfBuffer.slice(0, 20).toString("hex")}`,
   );
 
-  // 4. Upload to Supabase Storage using admin client
+  // 5. Upload to Supabase Storage using admin client
   const fileName = `statement-${orderId}.pdf`;
   console.log(`Uploading to statements bucket as ${fileName}`);
 
@@ -102,13 +102,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 5. Get public URL
+  // 6. Get public URL
   const { data: urlData } = supabaseAdmin.storage
     .from("statements")
     .getPublicUrl(fileName);
   const pdfUrl = urlData.publicUrl;
 
-  // 6. Update order status to 'generated' and store PDF URL
+  // 7. Update order status to 'generated' and store PDF URL
   await supabaseAdmin
     .from("orders")
     .update({
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     })
     .eq("id", orderId);
 
-  // 7. Send email with PDF attachment + download link
+  // 8. Send email with PDF attachment + download link
   try {
     const base64Content = pdfBuffer.toString("base64");
     console.log(`Base64 attachment length: ${base64Content.length}`);
@@ -144,26 +144,14 @@ export async function POST(request: NextRequest) {
 
     if (emailError) throw emailError;
 
-    // 8. Mark as delivered
+    // 9. Mark as delivered
     await supabaseAdmin
       .from("orders")
       .update({ status: "delivered", updated_at: new Date().toISOString() })
       .eq("id", orderId);
   } catch (emailError) {
     console.error("Email sending failed:", emailError);
-    // Don't fail the whole request – the user can still download from the confirmation page
   }
 
   return NextResponse.json({ success: true, orderId });
 }
-
-/* 
-   For debugging the email attachment, you can temporarily replace the Puppeteer
-   section with this dummy PDF generator. It creates a minimal valid PDF.
-   If this dummy PDF attaches and downloads correctly, the problem is in your
-   PDF generation. If it still fails, the issue is with the attachment process.
-
-   // Dummy PDF (Hello World)
-   const pdfBuffer = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 300 144]/Parent 2 0 R/Resources<</Font<</F1<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>>>>>/Contents 4 0 R>>endobj 4 0 obj<</Length 44>>stream\nBT/F1 24 Tf 100 100 Td(Hello World)Tj ET\nendstream endobj\nxref\n0 5\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\n0000000217 00000 n\ntrailer<</Size 5/Root 1 0 R>>\nstartxref\n299\n%%EOF')
-   console.log('Using dummy PDF for testing')
-*/
