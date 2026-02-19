@@ -4,8 +4,9 @@ import {
   generatePersonalLetter,
   generateFormalReport,
 } from "@/lib/generate-statement";
+import chromium from "@sparticuz/chromium";
+import puppeteer from "puppeteer-core";
 import type { IntakeFormData } from "@/lib/types";
-import puppeteer from "puppeteer";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -52,8 +53,10 @@ export async function POST(request: NextRequest) {
   let pdfBuffer: Buffer;
   try {
     const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
@@ -70,7 +73,6 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-
   // Log buffer info to debug attachment issues
   console.log(`PDF buffer size: ${pdfBuffer.length} bytes`);
   console.log(
