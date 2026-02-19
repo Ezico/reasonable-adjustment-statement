@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 export const neurodivergenceOptions = [
   "ADHD (Attention Deficit Hyperactivity Disorder)",
@@ -11,7 +11,7 @@ export const neurodivergenceOptions = [
   "Irlen Syndrome / Visual Stress",
   "Sensory Processing Differences",
   "Other",
-] as const
+] as const;
 
 export const environmentOptions = [
   "Office-based",
@@ -20,7 +20,7 @@ export const environmentOptions = [
   "Field / Site-based",
   "Educational / Academic",
   "Clinical / Healthcare",
-] as const
+] as const;
 
 export const challengeCategories = [
   "Executive Function (planning, prioritising, time management)",
@@ -32,7 +32,7 @@ export const challengeCategories = [
   "Reading / Writing (processing speed, comprehension, spelling)",
   "Focus & Attention (sustained concentration, task switching)",
   "Organisation (workspace, paperwork, digital files)",
-] as const
+] as const;
 
 export const adjustmentCategories = [
   {
@@ -95,7 +95,7 @@ export const adjustmentCategories = [
       "Reasonable time allowance for professional development",
     ],
   },
-] as const
+] as const;
 
 export const intakeFormSchema = z.object({
   // Personal Details
@@ -109,20 +109,28 @@ export const intakeFormSchema = z.object({
   // Neurodivergence Profile
   neurodivergenceTypes: z.array(z.string()).min(1, "Select at least one"),
   otherNeurodivergence: z.string().optional(),
-  diagnosisStatus: z.enum(["Formal diagnosis", "Awaiting assessment", "Self-identified"]),
+  diagnosisStatus: z.enum([
+    "Formal diagnosis",
+    "Awaiting assessment",
+    "Self-identified",
+  ]),
   diagnosticianName: z.string().optional(),
   diagnosisDate: z.string().optional(),
 
   // Work Environment
   workEnvironment: z.string().min(1, "Select a work environment"),
-  challengeAreas: z.array(z.string()).min(1, "Select at least one challenge area"),
+  challengeAreas: z
+    .array(z.string())
+    .min(1, "Select at least one challenge area"),
   challengeDetails: z.string().optional(),
 
   // Strengths
   strengths: z.string().min(1, "Describe at least one strength"),
 
   // Recommended Adjustments
-  selectedAdjustments: z.array(z.string()).min(1, "Select at least one adjustment"),
+  selectedAdjustments: z
+    .array(z.string())
+    .min(1, "Select at least one adjustment"),
   additionalAdjustments: z.string().optional(),
 
   // Assessor Details
@@ -130,6 +138,11 @@ export const intakeFormSchema = z.object({
   assessorRole: z.string().min(1, "Assessor role is required"),
   assessorOrganisation: z.string().optional(),
   assessmentDate: z.string().min(1, "Assessment date is required"),
-})
 
-export type IntakeFormData = z.infer<typeof intakeFormSchema>
+  // Output Format
+  outputFormat: z
+    .enum(["personal_letter", "formal_report"])
+    .default("personal_letter"),
+});
+
+export type IntakeFormData = z.infer<typeof intakeFormSchema>;

@@ -19,7 +19,7 @@ export default function GetStartedPage() {
       const orderId = await createOrder({
         email,
         intakeData: data,
-        outputFormat: "personal_letter",
+        outputFormat: data.outputFormat,
       });
       router.push(`/checkout/${orderId}`);
     } catch {

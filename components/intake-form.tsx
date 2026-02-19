@@ -99,6 +99,10 @@ const guidance: Record<string, { title: string; body: string }> = {
     title: "Date of assessment",
     body: "This records when the statement was prepared. It establishes a timeline for the employer to act -- ACAS recommends adjustments be implemented promptly once the need is identified.",
   },
+  outputFormat: {
+    title: "Which format works best for you?",
+    body: "A Personal Letter is assertive and addressed directly to your manager—best for a collaborative conversation. A Formal Report is clinical and third-person, suitable for HR departments or occupational health records. Both are equally valid; choose what fits your situation.",
+  },
 };
 
 /* ------------------------------------------------------------------ */
@@ -308,6 +312,15 @@ const questions: Question[] = [
     placeholder: "e.g. NeuroSupport Ltd",
   },
   {
+    id: "outputFormat",
+    label: "How should your statement be formatted?",
+    description:
+      "Choose between a personal letter (assertive, addressed to your manager) or a formal report (clinical, third-person, for HR records).",
+    type: "chip-group",
+    options: ["Personal Letter", "Formal Report"] as const,
+    required: true,
+  },
+  {
     id: "assessmentDate",
     label: "What date is this statement being prepared?",
     description: "Establishes the timeline for your employer to act.",
@@ -366,6 +379,7 @@ export function IntakeForm({ onComplete }: IntakeFormProps) {
     selectedAdjustments: [],
     diagnosisStatus: "",
     workEnvironment: "",
+    outputFormat: "",
     assessmentDate: new Date().toISOString().split("T")[0],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -493,6 +507,9 @@ export function IntakeForm({ onComplete }: IntakeFormProps) {
       assessorOrganisation:
         (formData.assessorOrganisation as string) || undefined,
       assessmentDate: (formData.assessmentDate as string) || "",
+      outputFormat: ((formData.outputFormat as string) === "Personal Letter"
+        ? "personal_letter"
+        : "formal_report") as "personal_letter" | "formal_report",
     };
     onComplete(data, (formData.email as string) || "");
   };
@@ -685,13 +702,6 @@ export function IntakeForm({ onComplete }: IntakeFormProps) {
             </button>
           )}
         </div>
-
-        <button
-          onClick={handleSubmit}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Submit
-        </button>
         <div className="flex items-center gap-3">
           {!question?.required && !isLast && (
             <button
